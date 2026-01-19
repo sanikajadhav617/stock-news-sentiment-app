@@ -4,7 +4,7 @@ import os
 import yfinance as yf
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
 
@@ -51,5 +51,5 @@ def analyze():
         recommendation=recommendation
     )
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     app.run()
