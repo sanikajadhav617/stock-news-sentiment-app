@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Result</title>
+</head>
+<body>
+    <h2>Result</h2>
+
+    <p>Company: {{ company }}</p>
+    <p>Symbol: {{ symbol }}</p>
+    <p>Price: ₹ {{ price }}</p>
+
+    <h3>News</h3>
+    <ul>
+        {% for h in headlines %}
+        <li>{{ h }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Recommendation: {{ recommendation }}</h2>
+
+    <a href="/">Go Back</a>
+</body>
+</html>
