@@ -6,7 +6,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 app = Flask(__name__)
 
-NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
+NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 
 analyzer = SentimentIntensityAnalyzer()
 
@@ -14,42 +14,64 @@ analyzer = SentimentIntensityAnalyzer()
 def home():
     return render_template("index.html")
 
+
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    company = request.form["company"]
-    symbol = request.form["symbol"]
+    try:
+        company = request.form["company"]
+        symbol = request.form["symbol"]
 
-    stock = yf.Ticker(symbol)
-    price = stock.history(period="1d")["Close"][0]
+        # -------- STOCK PRICE SAFE FETCH --------
+        stock = yf.Ticker(symbol)
+        hist = stock.history(period="1d")
 
-    url = f"https://newsapi.org/v2/everything?q={company}&apiKey={NEWS_API_KEY}"
-    news = requests.get(url).json()
+        if hist.empty:
+            price = "N/A"
+        else:
+            price = round(hist["Close"].iloc[-1], 2)
 
-    score = 0
-    headlines = []
+        # -------- NEWS FETCH SAFE --------
+        url = f"https://newsapi.org/v2/everything?q={company}&apiKey={NEWS_API_KEY}"
+        response = requests.get(url)
+        data = response.json()
 
-    for article in news["articles"][:5]:
-        title = article["title"]
-        headlines.append(title)
-        score += analyzer.polarity_scores(title)["compound"]
+        articles = data.get("articles", [])
 
-    score /= 5
+        if not articles:
+            headlines = ["No news found"]
+            recommendation = "HOLD"
+        else:
+            sentiment_score = 0
+            headlines = []
 
-    if score > 0.05:
-        recommendation = "BUY"
-    elif score < -0.05:
-        recommendation = "SELL"
-    else:
-        recommendation = "HOLD"
+            for article in articles[:5]:
+                title = article.get("title", "")
+                if title:
+                    score = analyzer.polarity_scores(title)["compound"]
+                    sentiment_score += score
+                    headlines.append(title)
 
-    return render_template(
-        "result.html",
-        company=company,
-        symbol=symbol,
-        price=round(price, 2),
-        headlines=headlines,
-        recommendation=recommendation
-    )
+            sentiment_score /= len(headlines)
+
+            if sentiment_score > 0.05:
+                recommendation = "BUY"
+            elif sentiment_score < -0.05:
+                recommendation = "SELL"
+            else:
+                recommendation = "HOLD"
+
+        return render_template(
+            "result.html",
+            company=company,
+            symbol=symbol,
+            price=price,
+            headlines=headlines,
+            recommendation=recommendation
+        )
+
+    except Exception as e:
+        return f"ERROR OCCURRED: {e}"
+
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
